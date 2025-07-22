@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "io"
 	"log"
 	"net/http"
 )
@@ -9,11 +8,19 @@ import (
 func main() {
 	const rootPath = "."
 	const port = "8080"
-
+	apiCfg := apiConfig{}
+	apiCfg.fileserverHits.Store(0)
 	mux := http.NewServeMux()
-	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir(rootPath))))
+	mux.Handle("/app/",
+		http.StripPrefix("/app",
+			apiCfg.middlewareMetricsInc(
+				http.FileServer(http.Dir(rootPath)),
+			),
+		),
+	)
 	mux.HandleFunc("/healthz", ServerReady)
-
+	mux.HandleFunc("/metrics", apiCfg.serveMetrics)
+	mux.HandleFunc("/reset", apiCfg.serveReset)
 	srv := &http.Server{
 		Handler: mux,
 		Addr:    ":" + port,
@@ -23,13 +30,4 @@ func main() {
 		rootPath,
 		port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-func ServerReady(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	n, err := w.Write([]byte("200 " + http.StatusText(http.StatusOK)))
-	if err != nil {
-		log.Printf("Error: responseWriter returned %v, %v", n, err)
-	}
 }
