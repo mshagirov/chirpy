@@ -19,9 +19,15 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func (cfg *apiConfig) serveMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, err := w.Write(fmt.Appendf([]byte("Hits: "), "%v", cfg.fileserverHits.Load()))
+	htmlBody := fmt.Sprintf(`<html>
+ <body>
+	<h1>Welcome, Chirpy Admin</h1>
+	 <p>Chirpy has been visited %d times!</p>
+ </body>
+</html>`, cfg.fileserverHits.Load())
+	_, err := w.Write([]byte(htmlBody))
 	if err != nil {
 		log.Printf("apiConfig.serveMetrics got error: %v", err)
 	}

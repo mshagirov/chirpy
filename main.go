@@ -11,16 +11,11 @@ func main() {
 	apiCfg := apiConfig{}
 	apiCfg.fileserverHits.Store(0)
 	mux := http.NewServeMux()
-	mux.Handle("/app/",
-		http.StripPrefix("/app",
-			apiCfg.middlewareMetricsInc(
-				http.FileServer(http.Dir(rootPath)),
-			),
-		),
-	)
-	mux.HandleFunc("GET /healthz", ServerReady)
-	mux.HandleFunc("GET /metrics", apiCfg.serveMetrics)
-	mux.HandleFunc("POST /reset", apiCfg.serveReset)
+	fsHandler := http.StripPrefix("/app", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir(rootPath))))
+	mux.Handle("/app/", fsHandler)
+	mux.HandleFunc("GET /api/healthz", ServerReady)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.serveMetrics)
+	mux.HandleFunc("POST /admin/reset", apiCfg.serveReset)
 	srv := &http.Server{
 		Handler: mux,
 		Addr:    ":" + port,
