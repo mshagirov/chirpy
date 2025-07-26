@@ -5,7 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
+	"strings"
 )
+
+func isBadWord(s string) bool {
+	badWords := []string{"kerfuffle", "sharbert", "fornax"}
+	return slices.Contains(badWords, strings.ToLower(s))
+}
 
 func errorResponse(msg string, code int, w http.ResponseWriter, r *http.Request) {
 	type errorVal struct {
@@ -44,8 +51,15 @@ func serveValidateChirp(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest, w, r)
 		return
 	}
-	type returnVals struct {
-		Valid bool `json:"valid"`
+	words := strings.Split(params.Body, " ")
+	for idx, val := range words {
+		if isBadWord(val) {
+			words[idx] = "****"
+		}
 	}
-	jsonResponse(returnVals{Valid: true}, http.StatusOK, w, r)
+	params.Body = strings.Join(words, " ")
+	type returnVals struct {
+		CleanedBody string `json:"cleaned_body"`
+	}
+	jsonResponse(returnVals{CleanedBody: params.Body}, http.StatusOK, w, r)
 }
