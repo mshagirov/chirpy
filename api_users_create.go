@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,6 +30,13 @@ func (cfg *apiConfig) serveCreateUser(w http.ResponseWriter, r *http.Request) {
 		errorResponse(err_str, http.StatusBadRequest, w, r)
 		return
 	}
+	if !validEmail(params.Email) {
+		err_str = fmt.Sprintf("Not a valid email: %s", params.Email)
+		log.Println(err_str)
+		errorResponse(err_str, http.StatusBadRequest, w, r)
+		return
+	}
+
 	user, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
 		err_str = fmt.Sprintf("Database error: %s", err)
@@ -42,4 +50,25 @@ func (cfg *apiConfig) serveCreateUser(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
 	}, http.StatusCreated, w, r)
+}
+
+func validEmail(email string) bool {
+	if !strings.ContainsRune(email, '@') {
+		return false
+	}
+	if strings.ContainsRune(email, ' ') {
+		return false
+	}
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return false
+	}
+	if len(parts[0]) < 1 {
+		return false
+	}
+	domain := strings.Split(parts[1], ".")
+	if len(domain) != 2 {
+		return false
+	}
+	return true
 }

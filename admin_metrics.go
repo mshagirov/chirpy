@@ -12,6 +12,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	platform       string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -34,14 +35,4 @@ func (cfg *apiConfig) serveMetrics(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("apiConfig.serveMetrics got error: %v", err)
 	}
-}
-
-func (cfg *apiConfig) serveReset(w http.ResponseWriter, r *http.Request) {
-	cfg.fileserverHits.Store(0)
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte("Counter was reset to 0")); err != nil {
-		log.Println("apiConfig.serveReset error: ", err)
-	}
-	log.Println("Reset fileserverHits to ", cfg.fileserverHits.Load())
 }

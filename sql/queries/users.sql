@@ -8,3 +8,6 @@ VALUES (
 )
 RETURNING *;
 
+-- name: Reset :exec
+DELETE FROM users
+WHERE true;
