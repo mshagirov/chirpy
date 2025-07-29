@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,16 +67,51 @@ func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 	}, http.StatusCreated, w, r)
 }
 
-func censorBadWords(s string) string {
-	isBadWord := func(w string) bool {
-		badWords := []string{"kerfuffle", "sharbert", "fornax"}
-		return slices.Contains(badWords, strings.ToLower(w))
+func (cfg *apiConfig) serveGetChirps(w http.ResponseWriter, r *http.Request) {
+	var err_str string
+	chirps, err := cfg.db.GetChirps(r.Context())
+	if err != nil {
+		err_str = fmt.Sprintf("Database error: %s", err)
+		log.Println(err_str)
+		errorResponse(err_str, http.StatusServiceUnavailable, w, r)
+		return
 	}
-	words := strings.Split(s, " ")
-	for idx, val := range words {
-		if isBadWord(val) {
-			words[idx] = "****"
-		}
+	var returnVals []Chirp
+	for _, c := range chirps {
+		returnVals = append(returnVals,
+			Chirp{
+				ID:        c.ID,
+				CreatedAt: c.CreatedAt,
+				UpdatedAt: c.UpdatedAt,
+				Body:      c.Body,
+				UserID:    c.UserID,
+			})
 	}
-	return strings.Join(words, " ")
+	jsonResponse(returnVals, http.StatusOK, w, r)
+}
+
+func (cfg *apiConfig) serveGetChirpWithID(w http.ResponseWriter, r *http.Request) {
+	var err_str string
+	strID := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(strID)
+	if err != nil {
+		err_str = fmt.Sprintf("Error parsing chirpID: %s", err)
+		log.Println(err_str)
+		errorResponse(err_str, http.StatusNotFound, w, r)
+		return
+	}
+	c, err := cfg.db.GetChirpWithID(r.Context(), chirpID)
+	if err != nil {
+		err_str = "Chirp not found!"
+		log.Println(err_str)
+		errorResponse(err_str, http.StatusNotFound, w, r)
+		return
+	}
+	jsonResponse(Chirp{
+		ID:        c.ID,
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
+		Body:      c.Body,
+		UserID:    c.UserID,
+	}, http.StatusOK, w, r)
 }
