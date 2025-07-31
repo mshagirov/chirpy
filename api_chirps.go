@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -20,16 +19,13 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
-	var err_str string
 	params := struct {
 		Body   string `json:"body"`
 		UserID string `json:"user_id"`
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
-		err_str = fmt.Sprintf("Error decoding parameters: %s", err)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusInternalServerError, w, r)
+		errorResponse(fmt.Sprintf("Error decoding parameters: %s", err), http.StatusInternalServerError, w, r)
 		return
 	}
 	if len([]rune(params.Body)) > 140 {
@@ -38,9 +34,7 @@ func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	user_id, err := uuid.Parse(params.UserID)
 	if err != nil {
-		err_str = fmt.Sprintf("Error parsing user_id: %s", err)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusBadRequest, w, r)
+		errorResponse(fmt.Sprintf("Error parsing user_id: %s", err), http.StatusBadRequest, w, r)
 		return
 	}
 	params.Body = censorBadWords(params.Body)
@@ -53,9 +47,7 @@ func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 		UserID: user_id,
 	})
 	if err != nil {
-		err_str = fmt.Sprintf("Database error: %s", err)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusServiceUnavailable, w, r)
+		errorResponse(fmt.Sprintf("Database error: %s", err), http.StatusServiceUnavailable, w, r)
 		return
 	}
 	jsonResponse(Chirp{
@@ -68,12 +60,9 @@ func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) serveGetChirps(w http.ResponseWriter, r *http.Request) {
-	var err_str string
 	chirps, err := cfg.db.GetChirps(r.Context())
 	if err != nil {
-		err_str = fmt.Sprintf("Database error: %s", err)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusServiceUnavailable, w, r)
+		errorResponse(fmt.Sprintf("Database error: %s", err), http.StatusServiceUnavailable, w, r)
 		return
 	}
 	var returnVals []Chirp
@@ -91,20 +80,15 @@ func (cfg *apiConfig) serveGetChirps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) serveGetChirpWithID(w http.ResponseWriter, r *http.Request) {
-	var err_str string
 	strID := r.PathValue("chirpID")
 	chirpID, err := uuid.Parse(strID)
 	if err != nil {
-		err_str = fmt.Sprintf("Error parsing chirpID: %s", err)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusNotFound, w, r)
+		errorResponse(fmt.Sprintf("Error parsing chirpID: %s", err), http.StatusNotFound, w, r)
 		return
 	}
 	c, err := cfg.db.GetChirpWithID(r.Context(), chirpID)
 	if err != nil {
-		err_str = "Chirp not found!"
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusNotFound, w, r)
+		errorResponse("Chirp not found", http.StatusNotFound, w, r)
 		return
 	}
 	jsonResponse(Chirp{

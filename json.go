@@ -11,6 +11,7 @@ func errorResponse(msg string, code int, w http.ResponseWriter, r *http.Request)
 		Error string `json:"error"`
 	}
 	jsonResponse(errorVal{Error: msg}, code, w, r)
+	log.Println(msg)
 }
 
 func jsonResponse(payload any, code int, w http.ResponseWriter, r *http.Request) {

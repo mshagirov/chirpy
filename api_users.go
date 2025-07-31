@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mshagirov/chirpy/internal/auth"
+	"github.com/mshagirov/chirpy/internal/database"
 )
 
 type User struct {
@@ -20,28 +21,35 @@ type User struct {
 
 func (cfg *apiConfig) serveCreateUser(w http.ResponseWriter, r *http.Request) {
 	params := struct {
-		Email string `json:"email"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}{}
-	var err_str string
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
-		err_str = fmt.Sprintf("Error decoding email: %s", err)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusBadRequest, w, r)
+		errorResponse(fmt.Sprintf("Error decoding email %s and password", err),
+			http.StatusBadRequest, w, r)
 		return
 	}
 	if !validEmail(params.Email) {
-		err_str = fmt.Sprintf("Not a valid email: %s", params.Email)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusBadRequest, w, r)
+		errorResponse(fmt.Sprintf("Not a valid email (%s)", params.Email),
+			http.StatusBadRequest, w, r)
 		return
 	}
-
-	user, err := cfg.db.CreateUser(r.Context(), params.Email)
+	if len(params.Password) < 1 {
+		errorResponse("Empty password field", http.StatusBadRequest, w, r)
+	}
+	passHash, err := auth.HashPassword(params.Password)
 	if err != nil {
-		err_str = fmt.Sprintf("Database error: %s", err)
-		log.Println(err_str)
-		errorResponse(err_str, http.StatusServiceUnavailable, w, r)
+		errorResponse("Error saving password", http.StatusServiceUnavailable, w, r)
+	}
+	user, err := cfg.db.CreateUser(r.Context(),
+		database.CreateUserParams{
+			Email:          params.Email,
+			HashedPassword: passHash,
+		})
+	if err != nil {
+		errorResponse(fmt.Sprintf("Database error: %s", err),
+			http.StatusServiceUnavailable, w, r)
 		return
 	}
 	jsonResponse(User{
