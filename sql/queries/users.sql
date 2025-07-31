@@ -8,7 +8,14 @@ VALUES (
   $2
 )
 RETURNING id, created_at, updated_at, email;
+--
+
+-- name: GetUserWithEmail :one
+SELECT *
+FROM users
+WHERE email = $1;
+--
 
 -- name: Reset :exec
-DELETE FROM users
-WHERE true;
+DELETE FROM users;
+--
