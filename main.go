@@ -19,6 +19,8 @@ func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	platform := os.Getenv("PLATFORM")
+	// CLI command for rand num: openssl rand -base64 64
+	secret := os.Getenv("SECRET")
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -29,6 +31,7 @@ func main() {
 	apiCfg := apiConfig{}
 	apiCfg.db = dbQueries
 	apiCfg.platform = platform
+	apiCfg.secret = secret
 	apiCfg.fileserverHits.Store(0)
 
 	mux := http.NewServeMux()

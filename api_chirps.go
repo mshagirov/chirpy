@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mshagirov/chirpy/internal/auth"
 	"github.com/mshagirov/chirpy/internal/database"
 )
 
@@ -20,21 +21,37 @@ type Chirp struct {
 
 func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 	params := struct {
-		Body   string `json:"body"`
-		UserID string `json:"user_id"`
+		Body string `json:"body"`
 	}{}
+	// r.Header
+	bearerToken, err := auth.GetBearerToken(r.Header)
+	fmt.Println("bearerToken:", bearerToken)
+	if err != nil {
+		errorResponse("No token", http.StatusBadRequest, w, r)
+		return
+	}
+	user_id, err := auth.ValidateJWT(bearerToken, cfg.secret)
+	fmt.Println("tokenUserID:", user_id)
+	if err != nil {
+		errorResponse("Unauthorized", http.StatusUnauthorized, w, r)
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
 		errorResponse(fmt.Sprintf("Error decoding parameters: %s", err), http.StatusInternalServerError, w, r)
 		return
 	}
+	// user_id, err := uuid.Parse(params.UserID)
+	// if err != nil {
+	// 	errorResponse(fmt.Sprintf("Error parsing user_id: %s", err), http.StatusBadRequest, w, r)
+	// 	return
+	// }
+	// if user_id != tokenUserID {
+	// 	errorResponse("Unauthorized", http.StatusUnauthorized, w, r)
+	// 	return
+	// }
 	if len([]rune(params.Body)) > 140 {
 		errorResponse("Chirp is too long", http.StatusBadRequest, w, r)
-		return
-	}
-	user_id, err := uuid.Parse(params.UserID)
-	if err != nil {
-		errorResponse(fmt.Sprintf("Error parsing user_id: %s", err), http.StatusBadRequest, w, r)
 		return
 	}
 	params.Body = censorBadWords(params.Body)
