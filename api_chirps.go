@@ -23,7 +23,6 @@ func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 	params := struct {
 		Body string `json:"body"`
 	}{}
-	// r.Header
 	bearerToken, err := auth.GetBearerToken(r.Header)
 	fmt.Println("bearerToken:", bearerToken)
 	if err != nil {
@@ -41,15 +40,6 @@ func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 		errorResponse(fmt.Sprintf("Error decoding parameters: %s", err), http.StatusInternalServerError, w, r)
 		return
 	}
-	// user_id, err := uuid.Parse(params.UserID)
-	// if err != nil {
-	// 	errorResponse(fmt.Sprintf("Error parsing user_id: %s", err), http.StatusBadRequest, w, r)
-	// 	return
-	// }
-	// if user_id != tokenUserID {
-	// 	errorResponse("Unauthorized", http.StatusUnauthorized, w, r)
-	// 	return
-	// }
 	if len([]rune(params.Body)) > 140 {
 		errorResponse("Chirp is too long", http.StatusBadRequest, w, r)
 		return
