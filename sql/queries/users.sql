@@ -7,7 +7,7 @@ VALUES (
   $1,
   $2
 )
-RETURNING id, created_at, updated_at, email;
+RETURNING *;
 --
 
 -- name: GetUserWithEmail :one
@@ -19,6 +19,13 @@ WHERE email = $1;
 -- name: UpdateUserWithID :one
 UPDATE users
 SET email = $2, hashed_password = $3
+WHERE id = $1
+RETURNING *;
+--
+
+-- name: SetChirpyRedWithID :one
+UPDATE users
+SET is_chirpy_red = $2
 WHERE id = $1
 RETURNING *;
 --

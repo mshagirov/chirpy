@@ -53,6 +53,7 @@ func (cfg *apiConfig) serveLogin(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 		Email:        user.Email,
+		IsChirpyRed:  user.IsChirpyRed,
 		Token:        tokenString,
 		RefreshToken: refreshToken.Token,
 	}, http.StatusOK, w, r)

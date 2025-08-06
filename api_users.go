@@ -18,6 +18,7 @@ type User struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 type userRequestParams struct {
@@ -65,10 +66,11 @@ func (cfg *apiConfig) serveCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonResponse(User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}, http.StatusCreated, w, r)
 }
 
@@ -97,9 +99,10 @@ func (cfg *apiConfig) serveUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonResponse(User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	}, http.StatusOK, w, r)
 }

@@ -21,6 +21,7 @@ func main() {
 	platform := os.Getenv("PLATFORM")
 	// CLI command for rand num: openssl rand -base64 64
 	secret := os.Getenv("SECRET")
+	polkaKey := os.Getenv("POLKA_KEY")
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -32,6 +33,7 @@ func main() {
 	apiCfg.db = dbQueries
 	apiCfg.platform = platform
 	apiCfg.secret = secret
+	apiCfg.polkaKey = polkaKey
 	apiCfg.fileserverHits.Store(0)
 
 	mux := http.NewServeMux()
@@ -49,6 +51,9 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", apiCfg.serveGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.serveGetChirpWithID)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.serveDeleteChirpWithID)
+
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.servePolkaWebhooks)
+
 	srv := &http.Server{
 		Handler: mux,
 		Addr:    ":" + port,
