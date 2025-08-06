@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,24 +20,35 @@ type User struct {
 	RefreshToken string    `json:"refresh_token"`
 }
 
-func (cfg *apiConfig) serveCreateUser(w http.ResponseWriter, r *http.Request) {
-	params := struct {
-		Password string `json:"password"`
-		Email    string `json:"email"`
-	}{}
+type userRequestParams struct {
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
+
+func decodeUserRequest(w http.ResponseWriter, r *http.Request) (userRequestParams, error) {
+	params := userRequestParams{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
-		errorResponse(fmt.Sprintf("Error decoding email %s and password", err),
+		errorResponse(fmt.Sprintf("Error decoding email and password: %v", err),
 			http.StatusBadRequest, w, r)
-		return
+		return params, err
 	}
 	if !validEmail(params.Email) {
-		errorResponse(fmt.Sprintf("Not a valid email (%s)", params.Email),
+		errorResponse(fmt.Sprintf("Invalid email (%s)", params.Email),
 			http.StatusBadRequest, w, r)
-		return
+		return params, fmt.Errorf("Invalid email")
 	}
 	if len(params.Password) < 1 {
 		errorResponse("Empty password field", http.StatusBadRequest, w, r)
+		return params, fmt.Errorf("Empty password")
+	}
+	return params, nil
+}
+
+func (cfg *apiConfig) serveCreateUser(w http.ResponseWriter, r *http.Request) {
+	params, err := decodeUserRequest(w, r)
+	if err != nil {
+		return
 	}
 	passHash, err := auth.HashPassword(params.Password)
 	if err != nil {
@@ -62,23 +72,34 @@ func (cfg *apiConfig) serveCreateUser(w http.ResponseWriter, r *http.Request) {
 	}, http.StatusCreated, w, r)
 }
 
-func validEmail(email string) bool {
-	if !strings.ContainsRune(email, '@') {
-		return false
+func (cfg *apiConfig) serveUpdateUser(w http.ResponseWriter, r *http.Request) {
+	user_id, err := jwtGetUserID(cfg.secret, w, r)
+	if err != nil {
+		return
 	}
-	if strings.ContainsRune(email, ' ') {
-		return false
+	params, err := decodeUserRequest(w, r)
+	if err != nil {
+		return
 	}
-	parts := strings.Split(email, "@")
-	if len(parts) != 2 {
-		return false
+	passHash, err := auth.HashPassword(params.Password)
+	if err != nil {
+		errorResponse("Error saving password", http.StatusServiceUnavailable, w, r)
 	}
-	if len(parts[0]) < 1 {
-		return false
+	updateParams := database.UpdateUserWithIDParams{
+		ID:             user_id,
+		Email:          params.Email,
+		HashedPassword: passHash,
 	}
-	domain := strings.Split(parts[1], ".")
-	if len(domain) != 2 {
-		return false
+	user, err := cfg.db.UpdateUserWithID(r.Context(), updateParams)
+	if err != nil {
+		errorResponse(fmt.Sprintf("Database error: %s", err),
+			http.StatusServiceUnavailable, w, r)
+		return
 	}
-	return true
+	jsonResponse(User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	}, http.StatusOK, w, r)
 }

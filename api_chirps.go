@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mshagirov/chirpy/internal/auth"
 	"github.com/mshagirov/chirpy/internal/database"
 )
 
@@ -20,21 +19,13 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
+	user_id, err := jwtGetUserID(cfg.secret, w, r)
+	if err != nil {
+		return
+	}
 	params := struct {
 		Body string `json:"body"`
 	}{}
-	bearerToken, err := auth.GetBearerToken(r.Header)
-	fmt.Println("bearerToken:", bearerToken)
-	if err != nil {
-		errorResponse("No token", http.StatusBadRequest, w, r)
-		return
-	}
-	user_id, err := auth.ValidateJWT(bearerToken, cfg.secret)
-	fmt.Println("tokenUserID:", user_id)
-	if err != nil {
-		errorResponse("Unauthorized", http.StatusUnauthorized, w, r)
-		return
-	}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
 		errorResponse(fmt.Sprintf("Error decoding parameters: %s", err), http.StatusInternalServerError, w, r)
@@ -105,4 +96,31 @@ func (cfg *apiConfig) serveGetChirpWithID(w http.ResponseWriter, r *http.Request
 		Body:      c.Body,
 		UserID:    c.UserID,
 	}, http.StatusOK, w, r)
+}
+
+func (cfg *apiConfig) serveDeleteChirpWithID(w http.ResponseWriter, r *http.Request) {
+	user_id, err := jwtGetUserID(cfg.secret, w, r)
+	if err != nil {
+		return
+	}
+	strID := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(strID)
+	if err != nil {
+		errorResponse(fmt.Sprintf("Error parsing chirpID: %s", err), http.StatusNotFound, w, r)
+		return
+	}
+	c, err := cfg.db.GetChirpWithID(r.Context(), chirpID)
+	if err != nil {
+		errorResponse("Chirp not found", http.StatusNotFound, w, r)
+		return
+	}
+	if c.UserID != user_id {
+		errorResponse("Forbidden", http.StatusForbidden, w, r)
+		return
+	}
+	err = cfg.db.DeleteChirpWithID(r.Context(), c.ID)
+	if err != nil {
+		errorResponse(fmt.Sprintf("Database error: %v", err), http.StatusBadRequest, w, r)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

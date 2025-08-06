@@ -41,12 +41,14 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.serveReset)
 	mux.HandleFunc("GET /api/healthz", ServerReady)
 	mux.HandleFunc("POST /api/users", apiCfg.serveCreateUser)
+	mux.HandleFunc("PUT /api/users", apiCfg.serveUpdateUser)
 	mux.HandleFunc("POST /api/login", apiCfg.serveLogin)
 	mux.HandleFunc("POST /api/refresh", apiCfg.serveRefresh)
 	mux.HandleFunc("POST /api/revoke", apiCfg.serveRevoke)
 	mux.HandleFunc("POST /api/chirps", apiCfg.serveCreateChirp)
 	mux.HandleFunc("GET /api/chirps", apiCfg.serveGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.serveGetChirpWithID)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.serveDeleteChirpWithID)
 	srv := &http.Server{
 		Handler: mux,
 		Addr:    ":" + port,
