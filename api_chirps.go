@@ -58,7 +58,22 @@ func (cfg *apiConfig) serveCreateChirp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) serveGetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.GetChirps(r.Context())
+	var user_id uuid.UUID
+	var chirps []database.Chirp
+	var err error
+	isForAuthor := false
+	// Query: api/chirps?author_id=AUTHORS
+	if authorIDStr := r.URL.Query().Get("author_id"); len(authorIDStr) > 0 {
+		user_id, err = uuid.Parse(authorIDStr)
+		if err == nil {
+			isForAuthor = true
+		}
+	}
+	if isForAuthor {
+		chirps, err = cfg.db.GetChirpsWithUserID(r.Context(), user_id)
+	} else {
+		chirps, err = cfg.db.GetChirps(r.Context())
+	}
 	if err != nil {
 		errorResponse(fmt.Sprintf("Database error: %s", err), http.StatusServiceUnavailable, w, r)
 		return
