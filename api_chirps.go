@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -144,6 +145,13 @@ func getChirpsWithQuery(cfg *apiConfig, w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		errorResponse(fmt.Sprintf("Database error: %s", err), http.StatusServiceUnavailable, w, r)
 		return chirps, err
+	}
+	// asc: earliest first; desc: latest first
+	if sortQuery := r.URL.Query().Get("sort"); sortQuery == "desc" {
+		sort.Slice(chirps,
+			func(i, j int) bool {
+				return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+			})
 	}
 	return chirps, nil
 }
